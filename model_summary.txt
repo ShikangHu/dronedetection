@@ -1,0 +1,79 @@
+DRONE AUDIO DETECTION MODEL SUMMARY
+Checkpoint: checkpoints/best_model_v3.pt
+
+
+MODEL ARCHITECTURE
+
+The model is based on EfficientNet-B0 pretrained on ImageNet. It performs binary classification to distinguish drone audio (label 1) from non-drone audio (label 0).
+
+The input is a single-channel log-mel spectrogram of shape (batch, 1, 128, T). Since EfficientNet-B0 expects 3-channel input, the single channel is broadcast to 3 channels before entering the backbone. The backbone produces a 1280-dimensional feature vector via global average pooling, which is then passed through a dropout layer (p=0.3) and a linear layer outputting a single logit. A sigmoid is applied at inference time to get a probability.
+
+
+AUDIO FEATURES
+
+All audio is resampled to 22,050 Hz and converted to mono. Each file is segmented into 3-second windows with 50% overlap (1.5 second hop), giving 66,150 samples per segment. Short clips that are less than 3 seconds are tiled (repeated) to fill the window rather than zero-padded, which avoids silence-dominated spectrograms.
+
+Each segment is converted to a log-mel spectrogram with 128 mel bins, FFT size 1024, hop length 512, and frequency range 50 Hz to 11,025 Hz. The spectrogram is then globally standardised using the mean and standard deviation computed over the entire training set.
+
+
+TRAINING PROCEDURE
+
+Training used two phases. In phase 1 (epochs 1 to 5) the backbone was frozen and only the classification head was trained. In phase 2 (epoch 6 onwards) the full model was fine-tuned end to end.
+
+The optimiser was AdamW with a backbone learning rate of 1e-4, head learning rate of 1e-3, and weight decay of 1e-4. A CosineAnnealingWarmRestarts scheduler was used with a 3-epoch linear warmup from 1e-6. Gradients were clipped to a max norm of 1.0. Mixed precision training (torch AMP) was enabled. Batch size was 64 and maximum epochs was 50 with early stopping (patience 7) monitored on validation loss.
+
+Class imbalance was handled with a WeightedRandomSampler that samples each class inversely proportional to its frequency.
+
+Training augmentations included random time shift (up to 500ms), Gaussian noise (SNR 20-40 dB), background noise mixing (SNR 5-20 dB), and SpecAugment (2 frequency masks up to 20 mel bins, 2 time masks up to 30 frames).
+
+The best checkpoint was saved at epoch 25 with val_loss of 0.0167. Validation metrics at that epoch were recall 0.999, precision 0.980, F1 0.989, and AUC 1.000.
+
+The default decision threshold is 0.5. A tuned threshold of 0.988 is recommended for high-precision deployment, giving recall 0.972 and precision 0.999 on the Kaggle test set.
+
+
+TRAINING DATA
+
+The model was trained on recordings from 7 datasets totalling 99,578 files across all splits.
+
+FSD50K contributed 45,255 no-drone files from the FreeSound Dataset 50K. The Kaggle dataset (yehiellevi/dataset-balanced-n-weighted-final) contributed 19,732 mixed drone and no-drone files. DADS (Drone Audio Dataset) contributed 17,605 drone files. The Al-Emadi drone audio dataset contributed 14,728 drone files. ESC-50 contributed 2,000 no-drone environmental sound files. DroneAudioSet contributed 168 drone files. The Zenodo Drone Detection Thesis dataset contributed 90 drone files.
+
+Across all splits, 36,548 files are drone (36.7%) and 63,030 are no-drone (63.3%).
+
+
+TRAIN / VAL / TEST SPLIT
+
+Splits are performed at the recording level (not segment level) to prevent data leakage. Each dataset is split stratified by label into 70% train, 15% val, and 15% test.
+
+Train set: 69,727 recordings (25,604 drone, 44,123 no-drone)
+Val set: 14,948 recordings (5,531 drone, 9,417 no-drone)
+Test set: 14,903 recordings (5,413 drone, 9,490 no-drone)
+
+Note that the actual number of model inputs is much larger than these counts since each recording is segmented into multiple 3-second overlapping windows at training and inference time.
+
+
+CHECKPOINT HISTORY
+
+best_model_v1.pt was trained on the original datasets: droneaudioset, dads, alemadi, esc50, and fsd50k.
+
+best_model_v2.pt added the Zenodo thesis dataset (90 recordings).
+
+best_model_v3.pt added the Kaggle balanced dataset (19,732 recordings) and introduced the tiling fix for short audio clips. This version also recomputed normalisation statistics over the expanded training set.
+
+
+REAL-WORLD INFERENCE RESULTS
+
+The following files were not part of any training, validation, or test split. All are out-of-distribution recordings used to verify generalisation.
+
+new_recording_63.wav, true label drone: DRONE DETECTED. 189 out of 190 segments flagged (99.5%), mean confidence 0.971.
+
+youtube_yes_drone.wav, true label drone: DRONE DETECTED. 13 out of 15 segments flagged (86.7%), mean confidence 0.792. The 2 missed segments were at the end of the recording where the drone was likely moving away.
+
+aeroplane.wav, true label no-drone: NO DRONE DETECTED. 0 out of 169 segments flagged, mean confidence approximately 0.000.
+
+street.wav, true label no-drone: NO DRONE DETECTED. 0 out of 1085 segments flagged, mean confidence approximately 0.000.
+
+traffic.wav, true label no-drone: NO DRONE DETECTED. 0 out of 399 segments flagged, mean confidence approximately 0.000. A brief blip at around 490-510 seconds reached a maximum confidence of 0.161 but never crossed the threshold.
+
+leafblower.wav, true label no-drone: NO DRONE DETECTED. 0 out of 14 segments flagged, mean confidence exactly 0.000. This was considered the hardest case due to the motor noise of a leaf blower resembling a drone.
+
+Overall result: 6 out of 6 correct (100% accuracy on real-world audio).

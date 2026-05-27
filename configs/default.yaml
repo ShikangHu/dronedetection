@@ -1,0 +1,102 @@
+# ── Drone Audio Classification – Default Config ──────────────────────────────
+# Override any value from CLI: python scripts/train.py training.lr_backbone=5e-5
+
+paths:
+  data_raw: data/raw
+  data_processed: data/processed
+  splits: data/splits
+  checkpoints: checkpoints
+  exports: exports
+
+data:
+  sample_rate: 22050
+  segment_duration: 3.0        # seconds
+  overlap: 0.5                 # 50% overlap → 1.5s hop between segments
+  n_mels: 128
+  n_fft: 1024
+  hop_length: 512
+  f_min: 50
+  f_max: 11025
+  power: 2.0
+  log_offset: 1.0e-9           # added before log to avoid log(0)
+  # Split ratios (must sum to 1.0)
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_seed: 42
+
+augmentation:
+  enabled: true
+  time_shift_ms: 500
+  gaussian_snr_min: 20.0
+  gaussian_snr_max: 40.0
+  background_snr_min: 5.0
+  background_snr_max: 20.0
+  time_stretch_min: 0.9
+  time_stretch_max: 1.1
+  pitch_shift_semitones: 2
+  spec_freq_num_masks: 2
+  spec_freq_mask_width: 20     # mel bins
+  spec_time_num_masks: 2
+  spec_time_mask_width: 30     # time frames
+  # Probability each augmentation is applied per sample
+  prob_time_shift: 0.5
+  prob_noise: 0.5
+  prob_background: 0.4
+  prob_time_stretch: 0.0
+  prob_pitch_shift: 0.0
+  prob_spec_augment: 0.5
+
+model:
+  name: efficientnet_b0        # options: efficientnet_b0 | lightweight_cnn
+  pretrained: true
+  dropout: 0.3
+  num_classes: 1               # binary classification (single logit)
+
+training:
+  batch_size: 64
+  epochs: 50
+  # Two-phase: freeze backbone for first N epochs, then unfreeze
+  freeze_epochs: 5
+  # Optimizer
+  optimizer: adamw
+  lr_backbone: 1.0e-4
+  lr_head: 1.0e-3
+  weight_decay: 1.0e-4
+  # Scheduler: CosineAnnealingWarmRestarts
+  scheduler: cosine_warm_restarts
+  t0: 10
+  t_mult: 2
+  # Warmup
+  warmup_epochs: 3
+  warmup_start_lr: 1.0e-6
+  # Regularisation
+  grad_clip: 1.0
+  # Early stopping
+  patience: 7
+  monitor: val_loss
+  # Mixed precision
+  use_amp: true
+  # DataLoader
+  num_workers: 8
+  pin_memory: true
+
+evaluation:
+  # Decision threshold (tuned on val set for >= 97% recall)
+  threshold: 0.5               # updated after threshold-tuning run
+  # Minimum recall target when doing threshold sweep
+  min_recall_target: 0.97
+
+logging:
+  project: drone-audio-classification
+  entity: null                 # wandb team/entity; null = personal account
+  log_audio_samples: true
+  log_top_k_errors: 10
+
+inference:
+  # Real-time sliding window
+  buffer_duration: 3.0         # seconds
+  step_duration: 1.5           # seconds (50% overlap)
+  smoothing_window: 3          # median over last N predictions
+  # Export
+  onnx_opset: 17

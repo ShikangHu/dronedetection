@@ -1,0 +1,15 @@
+# Lightweight CNN variant — edge/CPU deployment
+# Inherits everything from default.yaml and overrides model-specific settings
+defaults:
+  - default
+
+model:
+  name: lightweight_cnn
+  pretrained: false
+  dropout: 0.3
+
+training:
+  batch_size: 64
+  lr_backbone: 3.0e-4
+  lr_head: 3.0e-4
+  freeze_epochs: 0             # no pretrained backbone to freeze

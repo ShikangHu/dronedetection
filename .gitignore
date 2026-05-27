@@ -1,0 +1,53 @@
+# Data — never commit raw/processed audio
+data/
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ML artifacts
+outputs/
+runs/
+wandb/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.engine
+mean.npy
+std.npy
+
+# Hydra
+outputs/
+multirun/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Claude Code
+.claude/
