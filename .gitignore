@@ -28,7 +28,6 @@ env/
 outputs/
 runs/
 wandb/
-pretrained/
 *.pt
 *.pth
 *.onnx
