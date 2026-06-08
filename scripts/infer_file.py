@@ -32,7 +32,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audio", required=True, help="Path to audio file")
     parser.add_argument("--config", default="configs/default.yaml")
-    parser.add_argument("--checkpoint", default="checkpoints/best_model_v3.pt")
+    parser.add_argument("--checkpoint", default="pretrained/best_model_v3.pt")
     parser.add_argument("--threshold", type=float, default=None,
                         help="Decision threshold (default: from config)")
     args = parser.parse_args()
@@ -43,8 +43,8 @@ def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    # Load normalization stats
-    stats_dir = Path(cfg.paths.checkpoints)
+    # Load normalization stats from same directory as checkpoint
+    stats_dir = Path(args.checkpoint).parent
     mean, std = load_stats(stats_dir)
 
     # Load model
