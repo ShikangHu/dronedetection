@@ -28,13 +28,14 @@ env/
 outputs/
 runs/
 wandb/
-checkpoints/
+pretrained/
 *.pt
 *.pth
 *.onnx
 *.engine
 mean.npy
 std.npy
+!pretrained/*.pt
 
 # Hydra
 outputs/
