@@ -2,6 +2,10 @@
 
 A machine learning system that listens to audio and tells you whether a drone is present or not. Point it at any audio file (a recording from a microphone, a security camera, or even a YouTube clip) and it will say **"DRONE DETECTED"** or **"NO DRONE DETECTED"**, along with a confidence score.
 
+## Demo
+
+<video src="https://github.com/ShikangHu/dronedetection/releases/download/v1.0-demo/demo.mov" controls width="100%"></video>
+
 ---
 
 ## What does it actually do?
